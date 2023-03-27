@@ -3,9 +3,14 @@ import { useState } from 'react'
 import { AiFillEyeInvisible, AiFillEye } from 'react-icons/ai'
 import { Link } from 'react-router-dom'
 import OAuth from '../components/OAuth';
-
+import { createUserWithEmailAndPassword, getAuth, updateProfile } from "firebase/auth";
+import { db } from "../firebase";
+import { serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 export default function SignUp() {
-    const [showPassword, setShowPassword] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);      
+    const navigate = useNavigate();              
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -18,6 +23,25 @@ export default function SignUp() {
             [e.target.id]: e.target.value,
         }));
     }
+    async function onSubmit(e) {
+        e.preventDefault();
+        try {
+            const auth = getAuth();
+            const userCredentials = await createUserWithEmailAndPassword(auth, email, password);
+            updateProfile(auth.currentUser, {
+                displayName: name
+            });
+            const user = userCredentials.user;
+            const formDataCopy = {...formData};
+            delete formDataCopy.password;
+            formDataCopy.timestamp = serverTimestamp();
+            await setDoc(doc(db, "users", user.uid), formDataCopy);
+            toast.success("Sign up was successful");
+            navigate("/");
+        } catch (error) {
+            toast.error("Something went wrong with the registration");
+        }
+    }
   return (
     <section>
         <h1 className='text-3xl text-center mt-6 font-bold'>
@@ -29,7 +53,7 @@ export default function SignUp() {
                 src='https://images.unsplash.com/flagged/photo-1564767609342-620cb19b2357?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8a2V5fGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=800&q=60' alt='key' className='w-full rounded-2xl'/>
             </div>
             <div className='w-full md:w-[67%] lg:w-[40%] lg:ml-20'>
-                <form>
+                <form onSubmit={onSubmit}>
                 <input type='text' id='name' value={name} onChange={onChange} 
                     placeholder='Full name' className='mb-6 w-full px-4 py-2 text-xl text-gray-700 bg-white border-gray-300 rounded transition ease-in-out'/>
                     <input type='email' id='email' value={email} onChange={onChange} 
